@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Droplets, Leaf, Info, AlertCircle, Heart, ChevronDown, BookOpen, X, ExternalLink } from 'lucide-react';
+import { Calculator, Droplets, Leaf, Info, AlertCircle, Heart, ChevronDown, BookOpen, X, ExternalLink, Monitor } from 'lucide-react';
 
 interface CropType {
   id: string;
@@ -26,6 +26,11 @@ interface ValidationErrors {
   moistureContent?: string;
   recoveryEfficiency?: string;
   biomassFactor?: string;
+}
+
+interface DeviceData {
+  actualWaterVolume: number;
+  humidity: number;
 }
 
 const CROP_TYPES: CropType[] = [
@@ -63,7 +68,7 @@ function App() {
   const [formData, setFormData] = useState<FormData>({
     cropType: 'tunisian-olive',
     totalMass: '',
-    lossFraction: '20',
+    lossFraction: '10', // Changed default to 10%
     processingFactor: '1.0',
     moistureContent: '72.5',
     recoveryEfficiency: '50',
@@ -76,12 +81,39 @@ function App() {
   const [showResult, setShowResult] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [showDeviceInfo, setShowDeviceInfo] = useState(false);
+  const [deviceData, setDeviceData] = useState<DeviceData>({
+    actualWaterVolume: 0,
+    humidity: 45
+  });
 
   // Constants
   const WATER_DENSITY = 1; // kg/L
 
   // Get selected crop type data
   const selectedCrop = CROP_TYPES.find(crop => crop.id === formData.cropType) || CROP_TYPES[0];
+
+  // Device data simulation effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDeviceData(prev => ({
+        actualWaterVolume: prev.actualWaterVolume + (Math.random() * 0.05 + 0.02), // Gradual increase
+        humidity: Math.max(30, Math.min(85, prev.humidity + (Math.random() - 0.5) * 8)) // Realistic fluctuation
+      }));
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Reset device data when calculation starts
+  useEffect(() => {
+    if (showResult && result !== null) {
+      setDeviceData({
+        actualWaterVolume: result * 0.1, // Start with 10% of calculated value
+        humidity: 45 + Math.random() * 20 // Random starting humidity between 45-65%
+      });
+    }
+  }, [showResult, result]);
 
   const validateInputs = (): boolean => {
     const newErrors: ValidationErrors = {};
@@ -554,7 +586,7 @@ function App() {
                     className={`w-full px-4 py-3 rounded-lg bg-white/10 border ${
                       errors.lossFraction ? 'border-red-400' : 'border-white/30'
                     } text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200`}
-                    placeholder="Default: 20%"
+                    placeholder="Default: 10%"
                   />
                   {errors.lossFraction && (
                     <div className="flex items-center mt-2 text-red-300 text-sm">
@@ -701,6 +733,63 @@ function App() {
                   </div>
                 )}
               </div>
+
+              {/* Device Data Card */}
+              {showResult && result !== null && (
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
+                  <div className="flex items-center mb-6">
+                    <Monitor className="w-6 h-6 text-blue-200 mr-3" />
+                    <h2 className="text-2xl font-semibold text-white">Device Data</h2>
+                    <button
+                      onClick={() => setShowDeviceInfo(!showDeviceInfo)}
+                      className="ml-2 p-1 rounded-full hover:bg-white/10 transition-colors duration-200"
+                      title="Information about device data"
+                    >
+                      <Info className="w-5 h-5 text-blue-300" />
+                    </button>
+                  </div>
+
+                  {showDeviceInfo && (
+                    <div className="mb-4 p-3 bg-blue-500/20 rounded-lg border border-blue-400/30">
+                      <p className="text-blue-100 text-sm">
+                        <strong>Note:</strong> The displayed data is artificially generated for demonstration purposes 
+                        and updates every 5 seconds to simulate real-time device monitoring.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-xl p-6">
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="text-center">
+                          <p className="text-blue-100 text-sm mb-2">Actual Water Volume</p>
+                          <p className="text-2xl font-bold text-white">
+                            {formatResult(deviceData.actualWaterVolume)}
+                          </p>
+                          <div className="mt-2 flex items-center justify-center">
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse mr-2"></div>
+                            <span className="text-green-300 text-xs">Live</span>
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-blue-100 text-sm mb-2">Humidity</p>
+                          <p className="text-2xl font-bold text-white">
+                            {deviceData.humidity.toFixed(1)}%
+                          </p>
+                          <div className="mt-2 flex items-center justify-center">
+                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse mr-2"></div>
+                            <span className="text-blue-300 text-xs">Live</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center text-xs text-blue-300">
+                      Updates every 5 seconds
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Information Card */}
               <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
